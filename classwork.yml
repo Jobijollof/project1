@@ -1,0 +1,93 @@
+Resources:
+  ClassVPC:
+    Type: AWS::EC2::VPC
+    Properties: 
+      CidrBlock: 172.31.0.0/16
+      EnableDnsHostnames: True
+      EnableDnsSupport: True
+      Tags: 
+        - Key: awscohort6
+          Value: awscohrt6october
+  ClassSubnet:
+    Type: AWS::EC2::Subnet
+    Properties: 
+      AvailabilityZone: us-west-2a
+      CidrBlock: 172.31.0.0/24
+      MapPublicIpOnLaunch: True
+      Tags: 
+        - Key: awscohort6subnet
+          Value: awscohrt6octobersubnet
+      VpcId: 
+        Ref: ClassVPC
+  ClassInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties: 
+      Tags: 
+        - Key: awscohort6internetgateway
+          Value: awscohrt6octoberinternetgateway
+  VpcGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties: 
+      InternetGatewayId: 
+        Ref: ClassInternetGateway
+      VpcId:
+        Ref: ClassVPC
+  ClassRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties: 
+      Tags: 
+        - Key: awscohort6routetable
+          Value: awscohrt6octoberroutetable
+      VpcId:
+        Ref: ClassVPC
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: VpcGatewayAttachment
+    Properties:
+      RouteTableId:
+        Ref: ClassRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: ClassInternetGateway
+  SubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: 
+      RouteTableId:
+        Ref: ClassRouteTable
+      SubnetId:
+        Ref: ClassSubnet
+  ClassInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-08e2d37b6a0129927
+      AvailabilityZone: us-west-2a
+      InstanceType: t2.micro
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: True
+          DeviceIndex: 0
+          GroupSet:
+            - Ref: SecurityGroup
+          SubnetId: 
+            Ref: ClassSubnet
+      UserData:
+        Fn::Base64: 
+            !Sub |
+              #!/bin/bash
+              yum update -y
+              yum -y install httpd
+              systemctl enable httpd
+              systemctl start httpd.service
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: A GROUP
+      SecurityGroupIngress: 
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags: 
+        - Key: mykey
+          Value: mykeyvalue
+      VpcId:
+        Ref: ClassVPC
